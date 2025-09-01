@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>宿舍公共物品购置账本</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 20px;
+      background: #f5f5f7;
+      color: #1d1d1f;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+    }
+
+    input, select {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 999px;
+      padding: 8px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      transition: all 0.2s ease;
+      margin: 3px;
+    }
+
+    button.primary {
+      background: #0071e3;
+      color: #fff;
+    }
+    button.primary:hover {
+      background: #005bb5;
+    }
+
+    button.warning {
+      background: #ff9500;
+      color: #fff;
+    }
+    button.warning:hover {
+      background: #cc7a00;
+    }
+
+    button.danger {
+      background: #ff3b30;
+      color: #fff;
+    }
+    button.danger:hover {
+      background: #d32d27;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: white;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background: #f0f0f5;
+    }
+
+    #summary {
+      margin-top: 20px;
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>宿舍公共物品购置账本</h2>
+  
+  <input type="text" id="item" placeholder="物品名称">
+  <input type="number" id="amount" placeholder="金额">
+  <label for="buyer">购买人:</label>
+  <select id="buyer">
+    <option value="成员1">成员1</option>
+    <option value="成员2">成员2</option>
+    <option value="成员3">成员3</option>
+    <option value="成员4">成员4</option>
+  </select>
+  <button class="primary" onclick="addExpense()">添加</button>
+  <button class="danger" onclick="clearData()">清空数据</button>
+
+  <table id="records">
+    <tr>
+      <th>物品</th>
+      <th>金额</th>
+      <th>购买人</th>
+      <th>日期</th>
+      <th>操作</th>
+    </tr>
+  </table>
+
+  <div id="summary"></div>
+
+  <script>
+    let expenses = JSON.parse(localStorage.getItem("expenses")) || [];
+    let editIndex = -1;
+
+    function saveData() {
+      localStorage.setItem("expenses", JSON.stringify(expenses));
+    }
+
+    function render() {
+      let table = document.getElementById("records");
+      table.innerHTML = "<tr><th>物品</th><th>金额</th><th>购买人</th><th>日期</th><th>操作</th></tr>";
+
+      expenses.forEach((e, index) => {
+        table.innerHTML += `
+          <tr>
+            <td>${e.item}</td>
+            <td>${e.amount}</td>
+            <td>${e.buyer}</td>
+            <td>${e.date}</td>
+            <td>
+              <button class="warning" onclick="editExpense(${index})">编辑</button>
+              <button class="danger" onclick="deleteExpense(${index})">删除</button>
+            </td>
+          </tr>`;
+      });
+
+      // 统计分摊
+      let total = expenses.reduce((sum, e) => sum + e.amount, 0);
+      let avg = (expenses.length > 0) ? total / 4 : 0;
+      let summary = "总金额: " + total.toFixed(2) + " 元<br>";
+      let members = ["成员1", "成员2", "成员3", "成员4"];
+      members.forEach(m => {
+        let paid = expenses.filter(e => e.buyer === m).reduce((s, e) => s + e.amount, 0);
+        summary += `${m} 已付: ${paid.toFixed(2)} 元，应付: ${avg.toFixed(2)} 元，差额: ${(paid - avg).toFixed(2)} 元<br>`;
+      });
+      document.getElementById("summary").innerHTML = summary;
+    }
+
+    function addExpense() {
+      let item = document.getElementById("item").value.trim();
+      let amount = parseFloat(document.getElementById("amount").value);
+      let buyer = document.getElementById("buyer").value;
+      let date = new Date().toLocaleDateString();
+
+      if (!item || isNaN(amount)) {
+        alert("请输入完整信息");
+        return;
+      }
+
+      if (editIndex === -1) {
+        expenses.push({item, amount, buyer, date});
+      } else {
+        expenses[editIndex] = {item, amount, buyer, date};
+        editIndex = -1;
+        document.querySelector("button.primary").textContent = "添加";
+      }
+
+      saveData();
+      render();
+
+      // 清空输入框
+      document.getElementById("item").value = "";
+      document.getElementById("amount").value = "";
+      document.getElementById("buyer").selectedIndex = 0;
+    }
+
+    function editExpense(index) {
+      let e = expenses[index];
+      document.getElementById("item").value = e.item;
+      document.getElementById("amount").value = e.amount;
+      document.getElementById("buyer").value = e.buyer;
+
+      editIndex = index;
+      document.querySelector("button.primary").textContent = "更新";
+    }
+
+    function deleteExpense(index) {
+      if (confirm("确定要删除这条账单吗？")) {
+        expenses.splice(index, 1);
+        saveData();
+        render();
+      }
+    }
+
+    function clearData() {
+      if (confirm("确定要清空所有数据吗？")) {
+        expenses = [];
+        saveData();
+        render();
+      }
+    }
+
+    render();
+  </script>
+</body>
+</html>
